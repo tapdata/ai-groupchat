@@ -27,6 +27,33 @@ have() {
   command -v "$1" >/dev/null 2>&1
 }
 
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  local tmp pid elapsed status
+  tmp="$(mktemp)"
+  "$@" >"$tmp" 2>&1 </dev/null &
+  pid="$!"
+  elapsed=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$elapsed" -ge "$seconds" ]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -9 "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      rm -f "$tmp"
+      return 124
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$pid"
+  status="$?"
+  cat "$tmp"
+  rm -f "$tmp"
+  return "$status"
+}
+
 sudo_if_needed() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -42,10 +69,30 @@ java_major() {
     echo 0
     return
   fi
-  java -version 2>&1 | awk -F[\".] '/version/ {
+  local version_output major
+  if ! version_output="$(run_with_timeout 10 java -version)"; then
+    warn "java -version failed or did not complete within 10 seconds; treating Java as missing."
+    echo 0
+    return
+  fi
+  major="$(printf '%s\n' "$version_output" | awk -F[\".] '/version/ {
     if ($2 == "1") print $3; else print $2;
     exit
-  }'
+  }')"
+  echo "${major:-0}"
+}
+
+use_macos_java_home() {
+  if [ "$(uname -s)" != "Darwin" ] || [ ! -x /usr/libexec/java_home ]; then
+    return 1
+  fi
+  local java_home
+  if java_home="$(/usr/libexec/java_home -v 17 2>/dev/null)"; then
+    export JAVA_HOME="$java_home"
+    export PATH="$JAVA_HOME/bin:$PATH"
+    return 0
+  fi
+  return 1
 }
 
 install_with_package_manager() {
@@ -94,6 +141,8 @@ install_git() {
 
 install_java() {
   local major
+  info "Detecting Java version."
+  use_macos_java_home || true
   major="$(java_major)"
   if [ "${major:-0}" -ge 17 ] 2>/dev/null; then
     info "Java found: $(java -version 2>&1 | head -n 1)"
@@ -102,8 +151,10 @@ install_java() {
 
   log "Installing Java 17+"
   if have brew; then
+    info "Installing openjdk@17 with Homebrew. This can take several minutes."
     HOMEBREW_NO_AUTO_UPDATE=1 brew install openjdk@17
     export PATH="/opt/homebrew/opt/openjdk@17/bin:/usr/local/opt/openjdk@17/bin:$PATH"
+    use_macos_java_home || true
     return
   fi
 
