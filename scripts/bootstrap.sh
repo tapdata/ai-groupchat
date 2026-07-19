@@ -5,6 +5,9 @@ REPO_URL="${REPO_URL:-https://github.com/tapdata/ai-groupchat.git}"
 BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/ai-groupchat}"
 APP_PORT="${APP_PORT:-7860}"
+TOOLS_DIR="${TOOLS_DIR:-$HOME/.ai-groupchat-tools}"
+MAVEN_VERSION="${MAVEN_VERSION:-3.9.11}"
+MAVEN_HOME="${MAVEN_HOME:-$TOOLS_DIR/apache-maven-$MAVEN_VERSION}"
 
 log() {
   printf '\n==> %s\n' "$1"
@@ -124,6 +127,18 @@ install_with_package_manager() {
   fi
 }
 
+download_file() {
+  local url="$1"
+  local output="$2"
+  if have curl; then
+    curl -fL "$url" -o "$output"
+  elif have wget; then
+    wget -O "$output" "$url"
+  else
+    return 1
+  fi
+}
+
 install_git() {
   if have git; then
     info "Git found: $(git --version)"
@@ -188,10 +203,34 @@ install_maven() {
     info "Maven found: $(first_line_with_timeout 10 mvn -version)"
     return
   fi
-  log "Installing Maven"
-  if ! install_with_package_manager maven; then
-    fail "Maven is not installed and no supported package manager was found."
+
+  if [ -x "$MAVEN_HOME/bin/mvn" ]; then
+    export PATH="$MAVEN_HOME/bin:$PATH"
+    info "Maven found: $(first_line_with_timeout 10 mvn -version)"
+    return
   fi
+
+  log "Installing Maven"
+  info "Downloading Apache Maven $MAVEN_VERSION binary distribution."
+  info "This avoids package-manager Maven dependencies that may install another OpenJDK."
+  have tar || fail "tar is required to unpack Maven."
+
+  local archive primary_url fallback_url
+  archive="$(mktemp "${TMPDIR:-/tmp}/apache-maven.XXXXXX.tar.gz")"
+  primary_url="${APACHE_MAVEN_URL:-https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz}"
+  fallback_url="https://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz"
+
+  if ! download_file "$primary_url" "$archive"; then
+    info "Primary Maven mirror failed; trying Apache archive."
+    download_file "$fallback_url" "$archive" || fail "Could not download Apache Maven. Install Maven manually and rerun this script."
+  fi
+
+  mkdir -p "$TOOLS_DIR"
+  rm -rf "$MAVEN_HOME"
+  tar -xzf "$archive" -C "$TOOLS_DIR"
+  rm -f "$archive"
+  export PATH="$MAVEN_HOME/bin:$PATH"
+  info "Maven installed at $MAVEN_HOME"
 }
 
 clone_or_update() {

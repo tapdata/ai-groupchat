@@ -5,6 +5,9 @@ if "%REPO_URL%"=="" set "REPO_URL=https://github.com/tapdata/ai-groupchat.git"
 if "%BRANCH%"=="" set "BRANCH=main"
 if "%INSTALL_DIR%"=="" set "INSTALL_DIR=%USERPROFILE%\ai-groupchat"
 if "%APP_PORT%"=="" set "APP_PORT=7860"
+if "%TOOLS_DIR%"=="" set "TOOLS_DIR=%USERPROFILE%\.ai-groupchat-tools"
+if "%MAVEN_VERSION%"=="" set "MAVEN_VERSION=3.9.11"
+if "%MAVEN_HOME%"=="" set "MAVEN_HOME=%TOOLS_DIR%\apache-maven-%MAVEN_VERSION%"
 
 echo.
 echo ==^> Checking prerequisites
@@ -85,14 +88,31 @@ if not errorlevel 1 (
   for /f "delims=" %%v in ('mvn -version 2^>nul ^| findstr /b /c:"Apache Maven"') do echo     Maven found: %%v
   exit /b 0
 )
-echo Maven was not found. Attempting installation.
-call :install_package Apache.Maven maven
-call :refresh_path
+if exist "%MAVEN_HOME%\bin\mvn.cmd" (
+  set "PATH=%MAVEN_HOME%\bin;%PATH%"
+  for /f "delims=" %%v in ('mvn -version 2^>nul ^| findstr /b /c:"Apache Maven"') do echo     Maven found: %%v
+  exit /b 0
+)
+echo Maven was not found. Downloading Apache Maven %MAVEN_VERSION%.
+echo This avoids package-manager Maven dependencies that may install another JDK.
+if "%APACHE_MAVEN_URL%"=="" set "APACHE_MAVEN_URL=https://dlcdn.apache.org/maven/maven-3/%MAVEN_VERSION%/binaries/apache-maven-%MAVEN_VERSION%-bin.zip"
+if not exist "%TOOLS_DIR%" mkdir "%TOOLS_DIR%" || exit /b 1
+set "MAVEN_ZIP=%TEMP%\apache-maven-%MAVEN_VERSION%-%RANDOM%.zip"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-WebRequest -Uri '%APACHE_MAVEN_URL%' -OutFile '%MAVEN_ZIP%' -UseBasicParsing } catch { exit 1 }"
+if errorlevel 1 (
+  set "APACHE_MAVEN_URL=https://archive.apache.org/dist/maven/maven-3/%MAVEN_VERSION%/binaries/apache-maven-%MAVEN_VERSION%-bin.zip"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-WebRequest -Uri '%APACHE_MAVEN_URL%' -OutFile '%MAVEN_ZIP%' -UseBasicParsing } catch { exit 1 }" || exit /b 1
+)
+if exist "%MAVEN_HOME%" rmdir /s /q "%MAVEN_HOME%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%MAVEN_ZIP%' -DestinationPath '%TOOLS_DIR%' -Force" || exit /b 1
+del "%MAVEN_ZIP%" >nul 2>nul
+set "PATH=%MAVEN_HOME%\bin;%PATH%"
 where mvn >nul 2>nul
 if errorlevel 1 (
   echo ERROR: Maven installation failed. Install Maven manually from https://maven.apache.org/download.cgi
   exit /b 1
 )
+for /f "delims=" %%v in ('mvn -version 2^>nul ^| findstr /b /c:"Apache Maven"') do echo     Maven found: %%v
 exit /b 0
 
 :install_package
