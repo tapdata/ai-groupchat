@@ -54,6 +54,12 @@ run_with_timeout() {
   return "$status"
 }
 
+first_line_with_timeout() {
+  local seconds="$1"
+  shift
+  run_with_timeout "$seconds" "$@" | sed -n '1p'
+}
+
 sudo_if_needed() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -87,11 +93,14 @@ use_macos_java_home() {
     return 1
   fi
   local java_home
-  if java_home="$(/usr/libexec/java_home -v 17 2>/dev/null)"; then
+  info "Checking macOS Java home."
+  if java_home="$(run_with_timeout 10 /usr/libexec/java_home -v 17)"; then
     export JAVA_HOME="$java_home"
     export PATH="$JAVA_HOME/bin:$PATH"
+    info "JAVA_HOME set to $JAVA_HOME"
     return 0
   fi
+  info "No macOS Java 17 home found."
   return 1
 }
 
@@ -145,7 +154,7 @@ install_java() {
   use_macos_java_home || true
   major="$(java_major)"
   if [ "${major:-0}" -ge 17 ] 2>/dev/null; then
-    info "Java found: $(java -version 2>&1 | head -n 1)"
+    info "Java found: $(first_line_with_timeout 10 java -version)"
     return
   fi
 
@@ -176,7 +185,7 @@ install_java() {
 
 install_maven() {
   if have mvn; then
-    info "Maven found: $(mvn -version 2>/dev/null | head -n 1)"
+    info "Maven found: $(first_line_with_timeout 10 mvn -version)"
     return
   fi
   log "Installing Maven"
@@ -225,6 +234,7 @@ main() {
   install_maven
 
   have git || fail "Git installation failed."
+  info "Verifying Java 17+."
   [ "$(java_major)" -ge 17 ] 2>/dev/null || fail "Java 17+ installation failed."
   have mvn || fail "Maven installation failed."
 
