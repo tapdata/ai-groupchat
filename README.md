@@ -25,7 +25,7 @@ The project is a single Java/Javalin application. Build it with Maven, run one j
 - Git.
 - API keys or local CLI tools for the agents you want to use.
 
-The bootstrap scripts in `scripts/` can install Git, Java, and Maven on common systems.
+The bootstrap scripts in `scripts/` can install Git, Java, and Maven on common systems. They only install a JDK when Java 17+ is missing. Maven is installed from the Apache binary distribution into `~/.ai-groupchat-tools` or `%USERPROFILE%\.ai-groupchat-tools`, so installing Maven does not trigger package-manager OpenJDK dependencies.
 
 ## Quick Start
 
