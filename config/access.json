@@ -1,0 +1,8 @@
+{
+  "enabled" : true,
+  "allowLocalhost" : true,
+  "allowedIps" : [ ],
+  "tokenCookieName" : "gc_device",
+  "pairingMinutes" : 10,
+  "devices" : [ ]
+}

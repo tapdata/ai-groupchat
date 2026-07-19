@@ -1,0 +1,93 @@
+{
+  "port" : 7860,
+  "synthesizerId" : "claude",
+  "freeMode" : false,
+  "maintainerId" : "auggie",
+  "contextWindowMessages" : 50,
+  "agents" : [ {
+    "id" : "claude",
+    "name" : "Claude",
+    "provider" : "openai",
+    "model" : "deepseek-v4-pro",
+    "apiKey" : "<Your API KEY>",
+    "baseUrl" : "https://api.deepseek.com",
+    "systemPrompt" : "You are Claude, a member of a collaborative AI group chat.",
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : true
+  }, {
+    "id" : "claudecli",
+    "name" : "Claudecli",
+    "provider" : "cli",
+    "model" : "deepseek-v4-flash",
+    "command" : "claude --dangerously-skip-permissions --print --verbose --output-format stream-json",
+    "cwd" : "/Users/jarad/IdeaProjects/",
+    "env" : {
+      "ANTHROPIC_BASE_URL" : "https://api.deepseek.com/anthropic",
+      "ANTHROPIC_MODEL" : "deepseek-v4-pro",
+      "ANTHROPIC_AUTH_TOKEN" : "<Your API KEY>"
+    },
+    "timeoutSeconds" : 1200,
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : false
+  }, {
+    "id" : "codex",
+    "name" : "Codex",
+    "provider" : "openai",
+    "model" : "gpt-5.5",
+    "apiKey" : "<Your API KEY>",
+    "baseUrl" : "https://api.super-nb.me",
+    "systemPrompt" : "You are Codex, a member of a collaborative AI group chat.",
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : true
+  }, {
+    "id" : "codexcli",
+    "name" : "Codexcli",
+    "provider" : "cli",
+    "model" : "gpt-5.5",
+    "command" : "codex exec --json -c 'openai_base_url=\"https://api.super-nb.me\"' --dangerously-bypass-hook-trust --skip-git-repo-check",
+    "cwd" : "/Users/jarad/IdeaProjects/",
+    "systemPrompt" : "You are Codex, a coding-focused AI assistant. Provide concise, helpful code solutions.",
+    "env" : {
+      "CODEX_API_KEY" : "<Your API KEY>"
+    },
+    "timeoutSeconds" : 1200,
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : true
+  }, {
+    "id" : "reasonix-pro",
+    "name" : "Reasonix-Pro",
+    "provider" : "cli",
+    "model" : "deepseek-v4-pro",
+    "apiKey" : "<Your API KEY>",
+    "command" : "reasonix run --model deepseek-pro",
+    "cwd" : "/Users/jarad/IdeaProjects/",
+    "systemPrompt" : "You are Reasonix, a reasoning-focused AI member of a collaborative group chat. Think deeply and provide well-reasoned responses.",
+    "env" : {
+      "DEEPSEEK_API_KEY" : "<Your API KEY>"
+    },
+    "timeoutSeconds" : 1200,
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : true
+  }, {
+    "id" : "reasonix",
+    "name" : "Reasonix",
+    "provider" : "cli",
+    "model" : "deepseek-v4-flash",
+    "apiKey" : "<Your API KEY>",
+    "command" : "reasonix run --model deepseek-flash",
+    "cwd" : "/Users/jarad/IdeaProjects/",
+    "systemPrompt" : "You are Reasonix, a reasoning-focused AI member of a collaborative group chat. Think deeply and provide well-reasoned responses.",
+    "env" : {
+      "DEEPSEEK_API_KEY" : "<Your API KEY>"
+    },
+    "timeoutSeconds" : 1200,
+    "enabled" : true,
+    "freeMode" : false,
+    "verbose" : true
+  } ]
+}
