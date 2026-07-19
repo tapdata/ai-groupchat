@@ -8,8 +8,11 @@ if "%APP_PORT%"=="" set "APP_PORT=7860"
 
 echo.
 echo ==^> Checking prerequisites
+echo     Checking Git.
 call :ensure_git || exit /b 1
+echo     Checking Java 17+.
 call :ensure_java || exit /b 1
+echo     Checking Maven.
 call :ensure_maven || exit /b 1
 
 echo.
@@ -44,7 +47,10 @@ exit /b %ERRORLEVEL%
 
 :ensure_git
 where git >nul 2>nul
-if not errorlevel 1 exit /b 0
+if not errorlevel 1 (
+  for /f "delims=" %%v in ('git --version') do echo     Git found: %%v
+  exit /b 0
+)
 echo Git was not found. Attempting installation.
 call :install_package Git.Git git
 call :refresh_path
@@ -58,7 +64,10 @@ exit /b 0
 :ensure_java
 for /f %%v in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$v=(java -version 2^>^&1 | Select-String 'version').ToString(); if ($v -match '\"(\d+)(?:\.(\d+))?') { if ($Matches[1] -eq '1') { $Matches[2] } else { $Matches[1] } } else { 0 }" 2^>nul') do set "JAVA_MAJOR=%%v"
 if not defined JAVA_MAJOR set "JAVA_MAJOR=0"
-if %JAVA_MAJOR% GEQ 17 exit /b 0
+if %JAVA_MAJOR% GEQ 17 (
+  for /f "delims=" %%v in ('java -version 2^>^&1 ^| findstr /i "version"') do echo     Java found: %%v
+  exit /b 0
+)
 echo Java 17+ was not found. Attempting installation.
 call :install_package EclipseAdoptium.Temurin.17.JDK openjdk17
 call :refresh_path
@@ -72,7 +81,10 @@ exit /b 0
 
 :ensure_maven
 where mvn >nul 2>nul
-if not errorlevel 1 exit /b 0
+if not errorlevel 1 (
+  for /f "delims=" %%v in ('mvn -version 2^>nul ^| findstr /b /c:"Apache Maven"') do echo     Maven found: %%v
+  exit /b 0
+)
 echo Maven was not found. Attempting installation.
 call :install_package Apache.Maven maven
 call :refresh_path

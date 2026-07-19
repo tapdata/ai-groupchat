@@ -10,6 +10,10 @@ log() {
   printf '\n==> %s\n' "$1"
 }
 
+info() {
+  printf '    %s\n' "$1"
+}
+
 warn() {
   printf '\nWARN: %s\n' "$1" >&2
 }
@@ -47,8 +51,7 @@ java_major() {
 install_with_package_manager() {
   local packages=("$@")
   if have brew; then
-    brew update
-    brew install "${packages[@]}"
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install "${packages[@]}"
   elif have apt-get; then
     sudo_if_needed apt-get update
     sudo_if_needed apt-get install -y "${packages[@]}"
@@ -66,10 +69,13 @@ install_with_package_manager() {
 }
 
 install_git() {
-  have git && return
+  if have git; then
+    info "Git found: $(git --version)"
+    return
+  fi
   log "Installing Git"
   if have brew; then
-    brew install git
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install git
   elif have apt-get; then
     sudo_if_needed apt-get update
     sudo_if_needed apt-get install -y git
@@ -90,12 +96,13 @@ install_java() {
   local major
   major="$(java_major)"
   if [ "${major:-0}" -ge 17 ] 2>/dev/null; then
+    info "Java found: $(java -version 2>&1 | head -n 1)"
     return
   fi
 
   log "Installing Java 17+"
   if have brew; then
-    brew install openjdk@17
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install openjdk@17
     export PATH="/opt/homebrew/opt/openjdk@17/bin:/usr/local/opt/openjdk@17/bin:$PATH"
     return
   fi
@@ -117,7 +124,10 @@ install_java() {
 }
 
 install_maven() {
-  have mvn && return
+  if have mvn; then
+    info "Maven found: $(mvn -version 2>/dev/null | head -n 1)"
+    return
+  fi
   log "Installing Maven"
   if ! install_with_package_manager maven; then
     fail "Maven is not installed and no supported package manager was found."
@@ -126,7 +136,11 @@ install_maven() {
 
 clone_or_update() {
   log "Preparing source checkout"
+  info "Repository: $REPO_URL"
+  info "Branch: $BRANCH"
+  info "Install dir: $INSTALL_DIR"
   if [ -d "$INSTALL_DIR/.git" ]; then
+    info "Existing checkout found; fetching latest main branch."
     git -C "$INSTALL_DIR" fetch origin "$BRANCH"
     git -C "$INSTALL_DIR" checkout "$BRANCH"
     git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
@@ -134,6 +148,7 @@ clone_or_update() {
     fail "$INSTALL_DIR exists and is not an empty Git checkout. Set INSTALL_DIR to another path."
   else
     mkdir -p "$(dirname "$INSTALL_DIR")"
+    info "Cloning repository."
     git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
   fi
 }
@@ -141,6 +156,7 @@ clone_or_update() {
 build_and_run() {
   cd "$INSTALL_DIR"
   log "Building ai-groupchat"
+  info "Running Maven package with tests skipped."
   mvn -q -DskipTests package
 
   log "Starting ai-groupchat"
@@ -150,8 +166,11 @@ build_and_run() {
 
 main() {
   log "Checking prerequisites"
+  info "Checking Git."
   install_git
+  info "Checking Java 17+."
   install_java
+  info "Checking Maven."
   install_maven
 
   have git || fail "Git installation failed."
